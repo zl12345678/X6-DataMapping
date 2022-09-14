@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css" rel="stylesheet"> -->
+    <link href="./css/bootstrap.min.css" rel="stylesheet">
+    <link href="./css/index.css" rel="stylesheet">
+</head>
+
+<body>
+    <!-- 默认隐藏 -->
+    <!-- 右键菜单 -->
+    <ul id="contextmenu">
+        <li id="addBrother"><a onclick="addBrother()">添加同级节点</a></li>
+        <li id="addChild"><a onclick="addChild()">添加子节点</a></li>
+        <li id="editNode"><a onclick="editNode()">修改节点</a></li>
+        <li id="removeNode"><a onclick="removeNode()">删除节点</a></li>
+    </ul>
+
+    <div>
+        <div id="stencil" class="col-md-5" style="width: 200px;height:800px"></div>
+        <div id="container" class="col-md-5" style="width:80%;height: 600px;"></div>
+        <!-- <button onclick="graph.scrollToContent({ animation: { duration: 600 }})"
+            style="position: absolute;top: 0;left: 205px;">居中</button> -->
+
+        <button onclick="graph.centerContent()" style="position: absolute;top: 0;left: 205px;">居中</button>
+
+        <button onclick="graph.toSVG((dataUri) => {
+            X6.DataUri.downloadDataUri(X6.DataUri.svgToDataUrl(dataUri), 'chart.svg')
+          }
+          )" style="position: absolute;top: 0;left: 255px;">导出为SVG</button>
+
+        <button onclick="graph.toPNG((dataUri) => {
+    // 下载
+    X6.DataUri.downloadDataUri(dataUri, 'chart.png')
+  }
+  , {
+    width:1024,
+    height:768,
+    quality:1,
+  padding: {
+    top: 20,
+    right: 30,
+    bottom: 40,
+    left: 50,
+  },
+}
+  )" style="position: absolute;top: 0;left: 355px;">导出为PNG</button>
+
+    </div>
+
+    <script src="js/x6.js"></script>
+    <!-- <script src="js/jquery-1.10.2.js"></script> -->
+
+    <script>
+        // 初始化
+        // 输入输出表格高度
+        var tableHeight = 20;
+        // 输入输出表格宽度
+        var tableWidth = 120;
+        // 输入表格初始X坐标值
+        var inTableInitX = 80;
+        // 输入表格初始Y坐标值
+        var inTableInitY = 40;
+        // 输出表格初始X坐标值
+        var outTableInitX = 500;
+        // 输出表格初始Y坐标值
+        var outTableInitY = 40;
+        // 字段高度
+        var fieldHight = 20;
+        //父子字段向右的偏移值
+        var fieldOffect = 20;
+        // 子节点左边预留宽度：连接桩
+        var leftDefaultWidth = 10;
+        // 输入输入table边框颜色
+        var strokeColor = "#d0d0d0";
+        var Graph = X6.Graph;
+        var Addon = X6.Addon;
+        var Shape = X6.Shape;
+        // 指定id之前的节点数量
+        var CountPreId;
+        // 根据id获取的节点
+        var nodeById;
+        // 输入表 最大往右偏移次数
+        var leftMaxTimes = 0;
+        // 输出表 最大往右偏移次数
+        var rightMaxTimes = 0;
+        // 当前右键点击的节点
+        var currentNode;
+        // 当前右键点击的表名
+        var currentTableName;
+        // Common组件对象数组
+        var commonObjectArray = []
+        // Common组件名称数组
+        var commonNameArray = ['Constant', 'CustomFunction', 'Properties', 'Compare', 'GlobalVariable']
+        // 后台数据模型
+        var JsonData = {
+            "input_table": {
+                "id": "input_table",
+                "text": "",
+                "children": []
+            },
+            "output_table": {
+                "id": "output_table",
+                "text": "",
+                "children": []
+            },
+            "connectData": {
+
+            },
+            "componentData": [],
+        }
+        // 前端渲染时需要的数据模型
+        var uiJsonData = {
+            "cells": [
+                // 输入父级框
+                {
+                    "position": {
+                        "x": inTableInitX,
+                        "y": inTableInitY
+                    },
+                    "size": {
+                        "width": tableWidth,
+                        "height": tableHeight
+                    },
+                    "visible": true,
+                    "shape": "rect",
+                    "id": "input_table",
+                    "zIndex": 1,
+                    "children": [
+                    ],
+                    "attrs": {
+                        "body": {
+                            "strokeWidth": "1",
+                            "fill": "#00B0F0",
+                            "stroke": strokeColor
+                        },
+                        "label": {
+                            "text": "INPUT",
+                            "refY": 10,
+                            "fontWeight": "bold",
+                            "fill": "#fff"
+
+                        }
+                    },
+                    data: {
+                        "disableMove": false,
+                        "classify": "table"
+                    },
+                },
+
+                // 输出父级框
+                {
+                    "position": {
+                        "x": outTableInitX,
+                        "y": outTableInitY
+                    },
+                    "size": {
+                        "width": tableWidth,
+                        "height": tableHeight
+                    },
+                    "visible": true,
+                    "shape": "rect",
+                    "id": "output_table",
+                    "zIndex": 1,
+                    "children": [
+                    ],
+                    "attrs": {
+                        "body": {
+                            "strokeWidth": "1",
+                            "fill": "#8fe99e",
+                            "stroke": strokeColor
+                        },
+                        "label": {
+                            "text": "OUTPUT",
+                            "refY": 10,
+                            "fontWeight": "bold",
+                            "fill": "#fff"
+
+                        }
+                    },
+                    data: {
+                        "disableMove": false,
+                        "classify": "table"
+                    }
+                },
+
+
+
+
+            ]
+        }
+        // 画布初始化
+        const graph = new Graph({
+            container: document.getElementById('container'),
+            panning: true,
+            scroller: {
+                enabled: false,
+            },
+            snapline: true,
+            width: "80%",
+            height: 600,
+            background: {
+                color: '#fff', // 设置画布背景颜色
+                // image:'base64Url',
+                repeat: 'watermark'
+            },
+            grid: {
+                size: 10,      // 网格大小 10px
+                visible: true, // 渲染网格背景
+            },
+            mousewheel: {
+                enabled: true,
+                modifiers: ['ctrl', 'meta'],
+                minScale: 0.5,
+                maxScale: 2
+            },
+            connecting: {
+                // er连接线路由
+                router: {
+                    name: 'er',
+                    args: {
+                        offset: 25,
+                        direction: 'H',
+                    },
+                },
+                // 禁止连接画布上的点
+                allowBlank: false,
+                validateConnection({
+                    edge,
+                    edgeView,
+                    sourceView,
+                    targetView,
+                    sourcePort,
+                    targetPort,
+                    sourceMagnet,
+                    targetMagnet,
+                    sourceCell,
+                    targetCell,
+                    type
+                }) {
+                    console.log(edge);
+                    console.log(edgeView);
+                    console.log(targetView);
+                    console.log(sourcePort);
+                    console.log(targetPort);
+                    console.log(sourceMagnet);
+                    console.log(targetMagnet);
+                    console.log(sourceCell);
+                    console.log(targetCell);
+                    console.log(type);
+                    // 禁止连接节点
+                    if (!targetMagnet) {
+                        return !!targetMagnet
+                    }
+                    return true
+                },
+
+            },
+            interacting: function (cellView) {
+                if (cellView.cell.getData() != undefined && cellView.cell.getData().disableMove) {
+                    return { nodeMovable: false }
+                }
+                return true
+            },
+        })
+
+        // 组件节点注册
+        Graph.registerNode('Constant', {
+            markup: [
+                {
+                    tagName: 'rect',
+                    selector: 'titleRect',
+                },
+                {
+                    tagName: 'text',
+                    selector: 'titleText',
+                },
+                {
+                    tagName: 'rect',
+                    selector: 'body',
+                },
+                {
+                    tagName: 'text',
+                    selector: 'label',
+                },
+            ],
+
+        })
+
+
+        // 左边候选框
+        // #endregion
+        // #region 初始化 stencil
+        const stencil = new Addon.Stencil({
+            title: '组件库',
+            target: graph,
+            stencilGraphWidth: 200,
+            stencilGraphHeight: 200,
+            collapsable: true,
+
+            notFoundText: '未找到所需要的组件',
+            stencilGraphPadding: 0,
+            layoutOptions: {
+                columns: 1,
+                columnWidth: 200,
+                rowHeight: 24,
+                center: false,
+                dx: 0,
+                dy: 0,
+            },
+            resizeToFit: true,
+            getDragNode(node) {
+                // 这里返回一个新的节点作为拖拽节点
+                if (node.getData()) {
+                    let componentType = node.getData().componentType
+                    if ('Constant' == componentType) {
+
+
+                        let node = graph.createNode({
+                            width: 120,
+                            height: 20,
+                            shape: 'Constant',
+                            data: {
+                                classify: "component",
+                                componentType: componentType,
+                                value: '',
+                                type: ''
+                            },
+                            attrs: {
+                                titleRect: {
+                                    width: 120,
+                                    height: 20,
+                                    fill: '#DB70DB',
+                                    stroke: '#000',
+                                    strokeWidth: 1,
+                                },
+                                titleText: {
+                                    text: 'Constant',
+                                    textAnchor: 'middle',
+                                    textVerticalAnchor: 'middle',
+                                    refX: '50%',
+                                    refY: '50%',
+
+                                },
+                                body: {
+                                    width: 120,
+                                    height: 20,
+                                    refY: '100%',
+                                    fill: '#fff',
+                                    stroke: '#000',
+                                    strokeWidth: 1,
+                                },
+                                label: {
+                                    text: 'Const',
+                                    textAnchor: 'start',
+                                    textVerticalAnchor: 'middle',
+                                    refY: '150%',
+                                    refX: '0%',
+                                }
+                            },
+                            //连接桩
+                            ports: {
+                                "groups": {
+                                    "in": {
+                                        "position": 'right',
+                                        "attrs": {
+                                            "circle": {
+                                                refY: '20',
+                                                "r": 6,
+                                                "magnet": true,
+                                                "stroke": '#31d0c6',
+                                                "strokeWidth": 2,
+                                                "fill": '#fff',
+                                            },
+                                        },
+                                    },
+
+                                },
+                                "items": [
+                                    {
+                                        // "id": 'port1',
+                                        "group": "in"
+                                    },
+                                ],
+                            },
+
+                        })
+                        return node
+                    }
+                }
+                else {
+                    alert('拖动错误的组件')
+                }
+
+            },
+            // getDropNode(node) {
+            //     console.log(node)
+            //     return node
+            // },
+            search: (cell, keyword, groupName, stencil) => {
+                console.log(keyword)
+                // let cpmponentName = jQuery(cell.html())[0].dataset.text
+                let cpmponentName = cell.getData().type
+
+                if (keyword) {
+                    if (cpmponentName) {
+                        return cpmponentName.indexOf(keyword) >= 0
+                    }
+                    else {
+                        return false
+                    }
+                }
+
+                return false
+            },
+            groups: [
+                {
+                    title: 'Common',
+                    name: 'Common',
+                    collapsed: true,
+
+                },
+                {
+                    title: 'Arithmetic',
+                    name: 'Arithmetic',
+                    collapsed: true,
+
+                },
+                {
+                    title: 'Conditional',
+                    name: 'Conditional',
+                    collapsed: true,
+                },
+                {
+                    title: 'Boolean',
+                    name: 'Boolean',
+                    collapsed: true,
+                },
+                {
+                    title: 'Type Conversion',
+                    name: 'Conversion',
+                    collapsed: true,
+                },
+                {
+                    title: 'String',
+                    name: 'String',
+                    collapsed: true,
+                },
+            ],
+
+        })
+        //循环创建组件
+        commonNameArray.map(item => {
+            //创建组件
+            window[item] = new Shape.HTML(
+                {
+                    width: 200,
+                    height: 45,
+                    shape: 'html',
+                    html() {
+                        const wrap = document.createElement('div')
+                        wrap.innerHTML = `
+                    <div class="stencilNode" style="">
+                        <img src='./images/`+ item + `.svg' width="24" height="24" style="margin-left: 10px;"/>
+                        <span>`+ item + `</span>
+                    </div>`
+                        return wrap
+                    },
+                    data: {
+                        componentType: item,
+                        classify: "component",
+                    }
+                }
+            )
+            commonObjectArray.push(window[item])
+        })
+
+        //左边候选框加入组件
+        //Common类型组件加入
+        stencil.load(commonObjectArray, 'Common')
+        // #endregion
+        document.getElementById('stencil').appendChild(stencil.container)
+        //默认渲染
+        graph.fromJSON(uiJsonData)
+        //居中
+        // graph.scrollToContent()
+        graph.centerContent()
+
+        //方法定义
+        //获取指定id之前节点数量：getJsonCount
+        function getJsonCount(id, tableName) {
+            CountPreId = 1;
+            getJsonArrayTotal(id, JsonData[tableName].children)
+            return CountPreId;
+        }
+        function getJsonArrayTotal(id, nodeArray) {
+            for (let i = 0; i < nodeArray.length; i++) {
+                let item = nodeArray[i]
+                if (item.id != id) {
+                    CountPreId = CountPreId + 1;
+                    if (item.type == "ARRAY" || item.type == "OBJECT") {
+                        let flag = getJsonArrayTotal(id, item.children)
+                        if (flag) {
+                            return true
+                        }
+                    }
+                }
+                else {
+                    return true
+                }
+            }
+            // nodeArray
+            // nodeArray.map(item => {
+
+
+            // })
+        }
+
+        // 根据id获取组件
+        function getComponentById(id) {
+            for (let i = 0; i < JsonData.componentData.length; i++) {
+                if (JsonData.componentData[i].id == id) {
+                    return JsonData.componentData[i]
+                }
+            }
+        }
+        //根据id获取节点：getNodeById
+        function getNodeById(id, tableName) {
+            if (id == tableName) {
+                nodeById = JsonData[tableName]
+                return nodeById
+            }
+            nodeById = null;
+            getNodeItem(id, JsonData[tableName].children)
+            return nodeById;
+        }
+        function getNodeItem(id, nodeArray) {
+            nodeArray.map(item => {
+                if (item.id == id) {
+                    nodeById = item;	// 结果赋值
+                } else {
+                    if (item.type == "ARRAY" || item.type == "OBJECT") {
+                        getNodeItem(id, item.children);
+                    }
+                }
+            });
+        }
+        // 添加子节点
+        function addChild() {
+            let tableName = currentTableName;
+            let field = prompt("请输入字段名和类型", "name,ARRAY");
+            if (field) {
+                let name = field.split(",")[0]
+                let type = field.split(",")[1]
+
+                let id = guid()
+                let topTimes = 0, leftTimes = 0//
+
+                if (currentNode.id == "input_table" || currentNode.id == "output_table") {
+                    if (type == "ARRAY" || type == "OBJECT") {
+                        JsonData[tableName].children.push({
+                            "id": id,
+                            "text": name,
+                            "type": type,
+                            "topTimes": 0,
+                            "leftTimes": 0,
+                            "children": [],
+                            "parent": currentNode.id
+                        })
+                    }
+                    else {
+                        JsonData[tableName].children.push({
+                            "id": id,
+                            "text": name,
+                            "type": type,
+                            "topTimes": 0,
+                            "leftTimes": 0,
+                            "children": [],
+                            "parent": currentNode.id,
+                        })
+                    }
+                    getNodeById(id, tableName).leftTimes = leftTimes
+                    addObject(currentNode.id, id, name, type)
+                }
+                else {
+
+                    // topOffset = currentNode.getProp().position.y + ((!currentNode.children ? 0 : currentNode.children.length) - 1) * fieldHight
+
+                    leftTimes = Number.parseInt((currentNode.attrs.label.refX + fieldOffect) / 20)
+
+                    let nodeArray = getNodeById(currentNode.id, tableName)
+                    if (type == "ARRAY" || type == "OBJECT") {
+                        nodeArray.children.push({
+                            "id": id,
+                            "text": name,
+                            "type": type,
+                            "topTimes": 0,
+                            "leftTimes": 0,
+                            "children": [],
+                            "parent": currentNode.id,
+                        })
+                    }
+                    else {
+                        nodeArray.children.push({
+                            "id": id,
+                            "text": name,
+                            "type": type,
+                            "topTimes": 0,
+                            "leftTimes": 0,
+                            "children": [],
+                            "parent": currentNode.id,
+
+                        })
+                    }
+                    getNodeById(id, tableName).leftTimes = leftTimes
+                    addObject(currentNode.parent.id, id, name, type)
+                }
+
+            }
+
+        }
+        // 添加兄弟节点
+        function addBrother() {
+            let tableName = currentTableName;
+            let field = prompt("请输入字段名和类型", "name,ARRAY");
+            if (field) {
+                let name = field.split(",")[0]
+                let type = field.split(",")[1]
+
+                let id = guid()
+                let topTimes = 0, leftTimes = 0//
+
+                if (currentNode.id == "input_table" || currentNode.id == "output_table") {
+                    return
+                }
+                else {
+
+                    // topOffset = currentNode.getProp().position.y + ((!currentNode.children ? 0 : currentNode.children.length) - 1) * fieldHight
+
+                    leftTimes = Number.parseInt((currentNode.attrs.label.refX) / 20)
+                    debugger
+                    let node = getNodeById(currentNode.id, tableName)
+                    //当前节点的父节点
+                    let nodeArray = getNodeById(node.parent, tableName)
+                    if (type == "ARRAY" || type == "OBJECT") {
+                        nodeArray.children.push({
+                            "id": id,
+                            "text": name,
+                            "type": type,
+                            "topTimes": 0,
+                            "leftTimes": 0,
+                            "children": [],
+                            "parent": nodeArray.id,
+                        })
+                    }
+                    else {
+                        nodeArray.children.push({
+                            "id": id,
+                            "text": name,
+                            "type": type,
+                            "topTimes": 0,
+                            "leftTimes": 0,
+                            "children": [],
+                            "parent": nodeArray.id,
+
+                        })
+                    }
+                    getNodeById(id, tableName).leftTimes = leftTimes
+                    addObject(currentNode.parent.id, id, name, type)
+                }
+
+            }
+
+        }
+        // 删除节点
+        function removeNode() {
+
+            if (currentNode.data.classify == "table") {
+                if (currentNode.id == "input_table" || currentNode.id == "output_table") {
+                    return
+                }
+                let childNode = getNodeById(currentNode.id, currentTableName)
+                let parentNode = getNodeById(childNode.parent, currentTableName)
+                // 删除当前节点的子节点uijson
+                if (childNode.children) {
+                    childNode.children.forEach(item => {
+                        graph.removeNode(item.id)
+                    })
+                }
+                // 删除当前节点uijson
+                graph.removeNode(currentNode)
+
+                // 删除当前节点逻辑json
+                let index = getIndexOfJsonArrray(childNode.id, parentNode.children)
+                if (index >= 0) {
+                    parentNode.children.splice(index, 1)
+                }
+                else {
+                    console.log("未找到该节点")
+                }
+                saveUIdata()
+                let cellArray = uiJsonData.cells
+                // 子节点位置
+                cellArray.forEach(item => {
+                    if (item.id == "input_table" || item.id == "output_table") {
+                        return
+                    }
+                    let node = getNodeById(item.id, currentTableName)
+                    if (node) {
+                        if (currentTableName == "input_table") {
+                            item.y = inTableInitY + fieldHight * getJsonCount(node.id, currentTableName)
+                        }
+                        else {
+                            item.y = outTableInitY + fieldHight * getJsonCount(node.id, currentTableName)
+                        }
+                    }
+                })
+            }
+            if (currentNode.data.classify == "component") {
+                // 逻辑json删除
+                // 删除当前节点逻辑json
+                let index = getIndexOfJsonArrray(currentNode.id, JsonData.componentData)
+                if (index >= 0) {
+                    JsonData.componentData.splice(index, 1)
+                }
+                else {
+                    console.log("未找到该节点")
+                }
+                // 删除当前节点uijson
+                graph.removeNode(currentNode)
+                saveUIdata()
+            }
+            // saveUIdata()
+            graph.fromJSON(uiJsonData)
+        }
+
+        // 获取指定id的节点在数组中的下标
+        function getIndexOfJsonArrray(id, jsonArrat) {
+            for (let i = 0; i < jsonArrat.length; i++) {
+                if (jsonArrat[i].id == id) {
+                    return i
+                }
+            }
+            return -1
+        }
+        // 编辑节点
+        function editNode() {
+            console.log(currentNode);
+            if (currentNode.data.classify == 'table') {
+                let tableName = currentTableName;
+                let node = getNodeById(currentNode.id, tableName)
+                let field = prompt("请输入字段名和类型", node.text + ',' + node.type);
+                if (field) {
+                    let fieldArray = field.split(",")
+                    let name = fieldArray[0]
+                    let type = fieldArray[1]
+                    // 逻辑json修改
+                    node.text = name
+                    node.type = type
+                    // uijson修改
+                    uiJsonData.cells.forEach(item => {
+                        if (item.id == currentNode.id) {
+                            console.log(item)
+                            item.attrs.text.text = name + " [" + type + "]"
+                        }
+                    })
+                    graph.fromJSON(uiJsonData)
+                }
+            }
+            if (currentNode.data.classify == 'component') {
+                //组件的配置
+                if (currentNode.data.componentType == "Constant") {
+                    let componentNode = getComponentById(currentNode.id)
+                    let field = prompt("请输入值和类型", 'testValue,NUMBER');
+                    if (field) {
+                        let fieldArray = field.split(",")
+                        let value = fieldArray[0]
+                        let type = fieldArray[1]
+                        // 逻辑json修改
+                        componentNode.data.value = value
+                        componentNode.data.type = type
+                        // uijson修改
+                        uiJsonData.cells.forEach(item => {
+                            if (item.id == currentNode.id) {
+                                item.attrs.label.text = 'Const ' + value + " [" + type + "]"
+                                item.attrs.body.width = item.attrs.label.text.length * 10
+                                item.attrs.titleRect.width = item.attrs.label.text.length * 10
+                                item.size.width = item.attrs.label.text.length * 10
+                                console.log(item.attrs.label.text.length * 12)
+                                // console.log(item.attrs.label.text.fontsize())
+                            }
+                        })
+                        graph.fromJSON(uiJsonData)
+                    }
+
+                }
+            }
+
+        }
+        // 生成uuid
+        function guid() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                var r = Math.random() * 16 | 0,
+                    v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+        // 画布上添加一个节点：addObject
+        function addObject(tableName, id, name, type) {
+
+            let cellArray = uiJsonData.cells
+            let tableNode = cellArray.find(e => e.id == tableName)
+
+            let node = getNodeById(id, tableName)
+            if (node.type == "ARRAY" || node.type == "OBJECT") {
+                cellArray.push(
+                    {
+                        "position": {
+                            "x": tableName == "input_table" ? inTableInitX : outTableInitX,
+                            "y": tableName == "input_table" ? inTableInitY : outTableInitY,
+                        },
+                        "size": {
+                            "width": tableWidth,
+                            "height": fieldHight
+                        },
+                        "attrs": {
+                            "text": {
+                                "text": name + ' [' + type + ']'
+                            },
+                            "body": {
+                                "fill": "#fff",
+                                "strokeWidth": "1",
+                                "stroke": strokeColor
+                            },
+                            "label": {
+                                "fill": "#6c757d",
+                                "refX": 0,
+                                "textAnchor": "start"
+                            }
+                        },
+                        "visible": true,
+                        "shape": "rect",
+                        "id": id,
+                        "zIndex": 10,
+                        "data": {
+                            "disableMove": true,
+                            "type": node.type,
+                            "classify": "table"
+                        },
+                        "parent": tableName
+                    })
+
+            }
+            else {
+                cellArray.push(
+                    {
+                        "position": {
+                            "x": tableName == "input_table" ? inTableInitX : outTableInitX,
+                            "y": tableName == "input_table" ? inTableInitY : outTableInitY,
+                        },
+                        "size": {
+                            "width": tableWidth,
+                            "height": fieldHight
+                        },
+                        "attrs": {
+                            "text": {
+                                "text": name + ' [' + type + ']'
+                            },
+                            "body": {
+                                "fill": "#fff",
+                                "strokeWidth": "1",
+                                "stroke": strokeColor
+                            },
+                            "label": {
+                                "fill": "#6c757d",
+                                "refX": 0,
+                                "textAnchor": "start"
+                            }
+                        },
+                        //连接桩
+                        "ports": {
+                            "groups": {
+                                "in": {
+                                    "position": tableName == "input_table" ? 'right' : 'left',
+                                    "attrs": {
+                                        "circle": {
+                                            "r": 6,
+                                            "magnet": true,
+                                            "stroke": '#31d0c6',
+                                            "strokeWidth": 2,
+                                            "fill": '#fff',
+                                        },
+                                    },
+                                },
+
+                            },
+                            "items": [
+                                {
+                                    "id": 'port1',
+                                    "group": "in"
+                                },
+                            ],
+                        },
+                        "visible": true,
+                        "shape": "rect",
+                        "id": id,
+                        "zIndex": 10,
+                        "data": {
+                            "disableMove": true,
+                            "type": node.type,
+                            "classify": "table"
+                        },
+                        "parent": tableName
+                    })
+            }
+            tableNode.children.push(id)
+
+
+            // 子节点位置
+            cellArray.forEach(item => {
+                if (item.id == "input_table" || item.id == "output_table") {
+                    return
+                }
+                let node = getNodeById(item.id, tableName)
+                if (node) {
+                    if (item.parent.id = tableName) {
+                        if (tableName == "input_table") {
+                            if (node.leftTimes > leftMaxTimes) {
+                                leftMaxTimes = node.leftTimes
+                            }
+                        }
+                        else {
+                            if (node.leftTimes > rightMaxTimes) {
+                                rightMaxTimes = node.leftTimes
+                            }
+                        }
+                    }
+                    if (tableName == "input_table") {
+                        item.y = inTableInitY + fieldHight * getJsonCount(node.id, tableName)
+                    }
+                    else {
+                        item.y = outTableInitY + fieldHight * getJsonCount(node.id, tableName)
+                    }
+                    item.attrs.label.refX = (node.leftTimes) * fieldOffect + leftDefaultWidth
+                }
+            })
+
+            // 表格宽度自适应
+            cellArray.forEach(item => {
+                if (item.parent == "input_table") {
+                    item.size.width = 120 + leftMaxTimes * fieldOffect
+                }
+                if (item.parent == "output_table") {
+                    item.size.width = 120 + rightMaxTimes * fieldOffect
+                }
+
+            })
+            if (tableNode.id == "input_table") {
+                tableNode.size.width = 120 + leftMaxTimes * fieldOffect
+            }
+            else {
+                tableNode.size.width = 120 + rightMaxTimes * fieldOffect
+            }
+            graph.fromJSON(uiJsonData)
+            // saveUIdata()
+        }
+        //  同步ui样式
+        function saveUIdata() {
+            uiJsonData = graph.toJSON();
+            let inputNode = uiJsonData.cells.find(e => e.id == "input_table")
+            let outputNode = uiJsonData.cells.find(e => e.id == "output_table")
+            // 输入表格初始X坐标值
+            inTableInitX = inputNode.position.x;
+            // 输入表格初始Y坐标值
+            inTableInitY = inputNode.position.y;
+            // 输出表格初始X坐标值
+            outTableInitX = outputNode.position.x;
+            // 输出表格初始Y坐标值
+            outTableInitY = outputNode.position.y;
+            // graph.fromJSON(uiJsonData)
+        }
+
+        // 事件监听
+        // 监听鼠标右键点击：显示右键菜单
+        graph.on('node:contextmenu', ({ e, x, y, node, view }) => {
+            if (node.getData().classify == "table") {
+                if (node.parent) {
+                    currentTableName = node.parent.id
+                }
+                else {
+                    currentTableName = node.id
+                }
+                currentNode = node;
+
+                // 根据类型控制右键菜单显示
+                if (currentNode.id == "input_table" || currentNode.id == "output_table") {
+                    document.getElementById("addBrother").style.display = "none"
+                    document.getElementById("editNode").style.display = "none"
+                    document.getElementById("removeNode").style.display = "none"
+                    document.getElementById("addChild").style.display = ""
+                }
+                else {
+                    if (currentNode.getData().type == "ARRAY" || currentNode.getData().type == "OBJECT") {
+                        document.getElementById("addBrother").style.display = ""
+                        document.getElementById("editNode").style.display = ""
+                        document.getElementById("removeNode").style.display = ""
+                        document.getElementById("addChild").style.display = ""
+                    }
+                    else {
+                        document.getElementById("addBrother").style.display = ""
+                        document.getElementById("editNode").style.display = ""
+                        document.getElementById("removeNode").style.display = ""
+                        document.getElementById("addChild").style.display = "none"
+                    }
+                }
+            }
+            if (node.getData().classify == "component") {
+                currentNode = node;
+                document.getElementById("addBrother").style.display = "none"
+                document.getElementById("editNode").style.display = ""
+                document.getElementById("removeNode").style.display = ""
+                document.getElementById("addChild").style.display = "none"
+            }
+
+            //获取contextmenu尺寸
+            let menuWidth = document.getElementById("contextmenu").offsetWidth;
+            let menuHeight = document.getElementById("contextmenu").offsetHeight;
+
+            // node.getProp().position.x
+
+            //获取屏幕宽度、高度
+            var winWidth = window.innerWidth;
+            var winHeight = window.innerHeight;
+            //获取点击位置
+            var posX = e.pageX;
+            var posY = e.pageY;
+            //保持右键菜单在屏幕内:
+            if (posX + menuWidth + 10 >= winWidth && posY + menuHeight + 10 >= winHeight) {
+                //超出了右下方:
+                posLeft = posX - menuWidth - 10 + "px";
+                posTop = posY - menuHeight - 10 + "px";
+            }
+            else if (posX + menuWidth + 10 >= winWidth) {
+                //超出了右侧:
+                posLeft = posX - menuWidth - 10 + "px";
+                posTop = posY + 10 + "px";
+            }
+            else if (posY + menuHeight + 10 >= winHeight) {
+                //超出了底部:
+                posLeft = posX + 10 + "px";
+                posTop = posY - menuHeight - 10 + "px";
+            }
+            else {
+                //默认右下方显示:
+                posLeft = posX + 10 + "px";
+                posTop = posY + 10 + "px";
+            };
+
+            document.getElementById("contextmenu").style.cssText = 'visibility:visible;left: ' + posLeft + ';top: ' + posTop;
+            return false;//取消浏览器自带的右键菜单
+        })
+        // 监听网页鼠标左键点击事件：隐藏右键菜单
+        document.onclick = function () {
+            document.getElementById("contextmenu").style.display = 'none'//点击其他位置隐藏
+        };
+        // 监听边上鼠标移入：显示删除按钮
+        graph.on('edge:mouseenter', ({ edge }) => {
+            edge.addTools([
+                {
+                    name: 'target-arrowhead',
+                    args: {
+                        attrs: {
+                            width: 5,
+                            height: 5,
+                            'stroke-width': 1
+                        },
+                    },
+                },
+
+                {
+                    name: 'button-remove',
+                    args: {
+                        distance: 10,
+                    },
+                },
+            ])
+        })
+        // 监听边上鼠标移出：隐藏删除按钮
+        graph.on('edge:mouseleave', ({ edge }) => {
+            edge.removeTools()
+        })
+        // 监听边发生改变：同步ui样式
+        graph.on('edge:changed', ({ edge, options }) => {
+            saveUIdata()
+        })
+        // 监听节点发生改变：同步ui样式
+        graph.on('node:changed', ({ node, options }) => { saveUIdata() })
+        // 监听节点点击事件：高亮节点和连接线
+        graph.on('node:click', ({ e, x, y, cell, view }) => {
+            if (cell.id == "input_table" || cell.id == "output_table") {
+                return
+            }
+            let edges = graph.getConnectedEdges(cell, { indirect: true, deep: true })
+            if (edges && edges.length > 0) {
+                edges.forEach(edge => {
+                    edge.getAttrs().line.stroke = "#b9ecff"
+                    graph.getCellById(edge.source.cell).getAttrs().body.fill = "#b9ecff"
+                    graph.getCellById(edge.target.cell).getAttrs().body.fill = "#b9ecff"
+                    console.log()
+                })
+                saveUIdata()
+                graph.fromJSON(uiJsonData)
+            }
+
+        })
+        // 监听节点鼠标移开事件：取消高亮节点和连接线
+        graph.on('node:mouseleave', ({ e, x, y, cell, view }) => {
+            if (cell.id == "input_table" || cell.id == "output_table") {
+                return
+            }
+            let edges = graph.getConnectedEdges(cell, { indirect: true, deep: true })
+            if (edges && edges.length > 0) {
+                edges.forEach(edge => {
+                    edge.getAttrs().line.stroke = "#333"
+                    graph.getCellById(edge.source.cell).getAttrs().body.fill = "#fff"
+                    graph.getCellById(edge.target.cell).getAttrs().body.fill = "#fff"
+                })
+                saveUIdata()
+                graph.fromJSON(uiJsonData)
+            }
+
+        })
+        // 候选框节点拖拽到画布上事件：组件信息加入逻辑json
+        graph.on('node:added', ({ node }) => {
+            console.log(node)
+            JsonData.componentData.push({
+                id: node.id,
+                data: node.data
+            })
+            saveUIdata()
+            // const { x, y } = node.position()
+        })
+    </script>
+
+</body>
+
+</html>
