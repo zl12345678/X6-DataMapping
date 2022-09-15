@@ -21,9 +21,9 @@
         <li id="removeNode"><a onclick="removeNode()">删除节点</a></li>
     </ul>
 
-    <div>
-        <div id="stencil" class="col-md-5" style="width: 200px;height:800px"></div>
-        <div id="container" class="col-md-5" style="width:80%;height: 600px;"></div>
+    <div class="">
+        <div id="stencil" class="col-md-2" style="height:800px"></div>
+        <div id="container" class="col-md-10" style="height: 600px;"></div>
         <!-- <button onclick="graph.scrollToContent({ animation: { duration: 600 }})"
             style="position: absolute;top: 0;left: 205px;">居中</button> -->
 
@@ -54,6 +54,7 @@
     </div>
 
     <script src="js/x6.js"></script>
+    <script src="js/Constant.js"></script>
     <!-- <script src="js/jquery-1.10.2.js"></script> -->
 
     <script>
@@ -76,6 +77,12 @@
         var fieldOffect = 20;
         // 子节点左边预留宽度：连接桩
         var leftDefaultWidth = 10;
+        // 文字宽度
+        var leftTextWidth = 0;
+        var rightTextWidth = 0;
+        // 宽度比较计算变量
+        var leftCompare= 0;
+        var rightCompare= 0;
         // 输入输入table边框颜色
         var strokeColor = "#d0d0d0";
         var Graph = X6.Graph;
@@ -269,17 +276,20 @@
             },
         })
 
-        // 组件节点注册
-        Graph.registerNode('Constant', {
+
+
+        var constant = new Constant()
+
+
+
+
+
+        // 组件标题框
+        Graph.registerNode('componentTitle', {
+            inherit: 'rect',
+            width: 120,
+            height: 20,
             markup: [
-                {
-                    tagName: 'rect',
-                    selector: 'titleRect',
-                },
-                {
-                    tagName: 'text',
-                    selector: 'titleText',
-                },
                 {
                     tagName: 'rect',
                     selector: 'body',
@@ -289,7 +299,16 @@
                     selector: 'label',
                 },
             ],
-
+            attrs: {
+                body: {
+                    fill: '#DB70DB',
+                    stroke: strokeColor,
+                    strokeWidth: 1,
+                },
+                // label: {
+                //     text: 'CustomFunction',
+                // },
+            },
         })
 
 
@@ -299,7 +318,7 @@
         const stencil = new Addon.Stencil({
             title: '组件库',
             target: graph,
-            stencilGraphWidth: 200,
+            stencilGraphWidth: 250,
             stencilGraphHeight: 200,
             collapsable: true,
 
@@ -307,7 +326,7 @@
             stencilGraphPadding: 0,
             layoutOptions: {
                 columns: 1,
-                columnWidth: 200,
+                columnWidth: 250,
                 rowHeight: 24,
                 center: false,
                 dx: 0,
@@ -315,16 +334,20 @@
             },
             resizeToFit: true,
             getDragNode(node) {
+
                 // 这里返回一个新的节点作为拖拽节点
                 if (node.getData()) {
                     let componentType = node.getData().componentType
+                    // AAA
                     if ('Constant' == componentType) {
 
-
+                        return constant.createNode()
+                    }
+                    if ('CustomFunction' == componentType) {
                         let node = graph.createNode({
-                            width: 120,
+                            shape: 'componentTitle',
+                            width: 400,
                             height: 20,
-                            shape: 'Constant',
                             data: {
                                 classify: "component",
                                 componentType: componentType,
@@ -332,62 +355,11 @@
                                 type: ''
                             },
                             attrs: {
-                                titleRect: {
-                                    width: 120,
-                                    height: 20,
-                                    fill: '#DB70DB',
-                                    stroke: '#000',
-                                    strokeWidth: 1,
-                                },
-                                titleText: {
-                                    text: 'Constant',
-                                    textAnchor: 'middle',
-                                    textVerticalAnchor: 'middle',
-                                    refX: '50%',
-                                    refY: '50%',
 
-                                },
-                                body: {
-                                    width: 120,
-                                    height: 20,
-                                    refY: '100%',
-                                    fill: '#fff',
-                                    stroke: '#000',
-                                    strokeWidth: 1,
-                                },
                                 label: {
-                                    text: 'Const',
-                                    textAnchor: 'start',
-                                    textVerticalAnchor: 'middle',
-                                    refY: '150%',
-                                    refX: '0%',
+                                    text: 'CustomFunction'
                                 }
-                            },
-                            //连接桩
-                            ports: {
-                                "groups": {
-                                    "in": {
-                                        "position": 'right',
-                                        "attrs": {
-                                            "circle": {
-                                                refY: '20',
-                                                "r": 6,
-                                                "magnet": true,
-                                                "stroke": '#31d0c6',
-                                                "strokeWidth": 2,
-                                                "fill": '#fff',
-                                            },
-                                        },
-                                    },
-
-                                },
-                                "items": [
-                                    {
-                                        // "id": 'port1',
-                                        "group": "in"
-                                    },
-                                ],
-                            },
+                            }
 
                         })
                         return node
@@ -398,10 +370,11 @@
                 }
 
             },
-            // getDropNode(node) {
-            //     console.log(node)
-            //     return node
-            // },
+            getDropNode(node) {
+
+
+                return node.clone()
+            },
             search: (cell, keyword, groupName, stencil) => {
                 console.log(keyword)
                 // let cpmponentName = jQuery(cell.html())[0].dataset.text
@@ -459,7 +432,7 @@
             //创建组件
             window[item] = new Shape.HTML(
                 {
-                    width: 200,
+                    width: document.getElementById("stencil").width,
                     height: 45,
                     shape: 'html',
                     html() {
@@ -490,6 +463,8 @@
         //居中
         // graph.scrollToContent()
         graph.centerContent()
+        // 初始化完成
+
 
         //方法定义
         //获取指定id之前节点数量：getJsonCount
@@ -643,7 +618,6 @@
                     // topOffset = currentNode.getProp().position.y + ((!currentNode.children ? 0 : currentNode.children.length) - 1) * fieldHight
 
                     leftTimes = Number.parseInt((currentNode.attrs.label.refX) / 20)
-                    debugger
                     let node = getNodeById(currentNode.id, tableName)
                     //当前节点的父节点
                     let nodeArray = getNodeById(node.parent, tableName)
@@ -679,7 +653,6 @@
         }
         // 删除节点
         function removeNode() {
-
             if (currentNode.data.classify == "table") {
                 if (currentNode.id == "input_table" || currentNode.id == "output_table") {
                     return
@@ -705,21 +678,27 @@
                 }
                 saveUIdata()
                 let cellArray = uiJsonData.cells
-                // 子节点位置
-                cellArray.forEach(item => {
-                    if (item.id == "input_table" || item.id == "output_table") {
-                        return
-                    }
-                    let node = getNodeById(item.id, currentTableName)
-                    if (node) {
-                        if (currentTableName == "input_table") {
-                            item.y = inTableInitY + fieldHight * getJsonCount(node.id, currentTableName)
-                        }
-                        else {
-                            item.y = outTableInitY + fieldHight * getJsonCount(node.id, currentTableName)
-                        }
-                    }
-                })
+                // // 子节点位置
+                // cellArray.forEach(item => {
+                //     if (item.id == "input_table" || item.id == "output_table") {
+                //         return
+                //     }
+                //     let node = getNodeById(item.id, currentTableName)
+                //     if (node) {
+                //         if (currentTableName == "input_table") {
+                //             item.y = inTableInitY + fieldHight * getJsonCount(node.id, currentTableName)
+                //         }
+                //         else {
+                //             item.y = outTableInitY + fieldHight * getJsonCount(node.id, currentTableName)
+                //         }
+                //     }
+                // })
+                let tableNode = cellArray.find(e => e.id == currentTableName)
+                
+                widthAuto(cellArray,tableNode)
+            
+            
+            
             }
             if (currentNode.data.classify == "component") {
                 // 逻辑json删除
@@ -766,7 +745,7 @@
                     uiJsonData.cells.forEach(item => {
                         if (item.id == currentNode.id) {
                             console.log(item)
-                            item.attrs.text.text = name + " [" + type + "]"
+                            item.attrs.label.text = name + " [" + type + "]"
                         }
                     })
                     graph.fromJSON(uiJsonData)
@@ -774,30 +753,9 @@
             }
             if (currentNode.data.classify == 'component') {
                 //组件的配置
+                //AAA
                 if (currentNode.data.componentType == "Constant") {
-                    let componentNode = getComponentById(currentNode.id)
-                    let field = prompt("请输入值和类型", 'testValue,NUMBER');
-                    if (field) {
-                        let fieldArray = field.split(",")
-                        let value = fieldArray[0]
-                        let type = fieldArray[1]
-                        // 逻辑json修改
-                        componentNode.data.value = value
-                        componentNode.data.type = type
-                        // uijson修改
-                        uiJsonData.cells.forEach(item => {
-                            if (item.id == currentNode.id) {
-                                item.attrs.label.text = 'Const ' + value + " [" + type + "]"
-                                item.attrs.body.width = item.attrs.label.text.length * 10
-                                item.attrs.titleRect.width = item.attrs.label.text.length * 10
-                                item.size.width = item.attrs.label.text.length * 10
-                                console.log(item.attrs.label.text.length * 12)
-                                // console.log(item.attrs.label.text.fontsize())
-                            }
-                        })
-                        graph.fromJSON(uiJsonData)
-                    }
-
+                    constant.editNode()
                 }
             }
 
@@ -829,9 +787,9 @@
                             "height": fieldHight
                         },
                         "attrs": {
-                            "text": {
-                                "text": name + ' [' + type + ']'
-                            },
+                            // "text": {
+                            //     "text": name + ' [' + type + ']'
+                            // },
                             "body": {
                                 "fill": "#fff",
                                 "strokeWidth": "1",
@@ -840,7 +798,8 @@
                             "label": {
                                 "fill": "#6c757d",
                                 "refX": 0,
-                                "textAnchor": "start"
+                                "textAnchor": "start",
+                                "text": name + ' [' + type + ']'
                             }
                         },
                         "visible": true,
@@ -868,9 +827,9 @@
                             "height": fieldHight
                         },
                         "attrs": {
-                            "text": {
-                                "text": name + ' [' + type + ']'
-                            },
+                            // "text": {
+                            //     "text": name + ' [' + type + ']'
+                            // },
                             "body": {
                                 "fill": "#fff",
                                 "strokeWidth": "1",
@@ -879,7 +838,8 @@
                             "label": {
                                 "fill": "#6c757d",
                                 "refX": 0,
-                                "textAnchor": "start"
+                                "textAnchor": "start",
+                                "text": name + ' [' + type + ']'
                             }
                         },
                         //连接桩
@@ -919,53 +879,9 @@
                     })
             }
             tableNode.children.push(id)
+            widthAuto(cellArray,tableNode)
 
-
-            // 子节点位置
-            cellArray.forEach(item => {
-                if (item.id == "input_table" || item.id == "output_table") {
-                    return
-                }
-                let node = getNodeById(item.id, tableName)
-                if (node) {
-                    if (item.parent.id = tableName) {
-                        if (tableName == "input_table") {
-                            if (node.leftTimes > leftMaxTimes) {
-                                leftMaxTimes = node.leftTimes
-                            }
-                        }
-                        else {
-                            if (node.leftTimes > rightMaxTimes) {
-                                rightMaxTimes = node.leftTimes
-                            }
-                        }
-                    }
-                    if (tableName == "input_table") {
-                        item.y = inTableInitY + fieldHight * getJsonCount(node.id, tableName)
-                    }
-                    else {
-                        item.y = outTableInitY + fieldHight * getJsonCount(node.id, tableName)
-                    }
-                    item.attrs.label.refX = (node.leftTimes) * fieldOffect + leftDefaultWidth
-                }
-            })
-
-            // 表格宽度自适应
-            cellArray.forEach(item => {
-                if (item.parent == "input_table") {
-                    item.size.width = 120 + leftMaxTimes * fieldOffect
-                }
-                if (item.parent == "output_table") {
-                    item.size.width = 120 + rightMaxTimes * fieldOffect
-                }
-
-            })
-            if (tableNode.id == "input_table") {
-                tableNode.size.width = 120 + leftMaxTimes * fieldOffect
-            }
-            else {
-                tableNode.size.width = 120 + rightMaxTimes * fieldOffect
-            }
+           
             graph.fromJSON(uiJsonData)
             // saveUIdata()
         }
@@ -985,8 +901,74 @@
             // graph.fromJSON(uiJsonData)
         }
 
+        // 表宽度自适应
+        function widthAuto(cellArray,tableNode){
+            let tableName= tableNode.id
+            if (tableName == "input_table"){
+                leftCompare=0
+            }
+            else{
+                rightCompare=0
+            }
+             // 子节点位置
+             cellArray.forEach(item => {
+                if (item.id == "input_table" || item.id == "output_table") {
+                    return
+                }
+                let node = getNodeById(item.id, tableName)
+                if (node) {
+
+                    if (item.parent.id = tableName) {
+
+                        console.log(node.text.length);
+                        let i = Number.parseInt((node.text.length + node.type.length + 3) * 14 / fieldOffect) + node.leftTimes
+                        if (tableName == "input_table") {
+                            
+                            if (i > leftCompare) {
+                                leftCompare=i
+                                leftMaxTimes = node.leftTimes
+                                leftTextWidth = (node.text.length + node.type.length + 3) * 10
+                            }
+                        }
+                        else {
+                            if (i > rightCompare) {
+                                rightCompare=i
+                                rightMaxTimes = node.leftTimes
+                                rightTextWidth = (node.text.length + node.type.length + 3) * 10
+                            }
+                        }
+                    }
+                    if (tableName == "input_table") {
+                        item.y = inTableInitY + fieldHight * getJsonCount(node.id, tableName)
+                    }
+                    else {
+                        item.y = outTableInitY + fieldHight * getJsonCount(node.id, tableName)
+                    }
+                    item.attrs.label.refX = (node.leftTimes) * fieldOffect + leftDefaultWidth
+                }
+            })
+
+            console.log(leftTextWidth);
+            // 表格宽度自适应
+            cellArray.forEach(item => {
+                if (item.parent == "input_table") {
+                    item.size.width = 0 + leftMaxTimes * fieldOffect + leftTextWidth
+                }
+                if (item.parent == "output_table") {
+                    item.size.width = 0 + rightMaxTimes * fieldOffect + rightTextWidth
+                }
+
+            })
+            if (tableNode.id == "input_table") {
+                tableNode.size.width = 0 + leftMaxTimes * fieldOffect + leftTextWidth
+            }
+            else {
+                tableNode.size.width = 0 + rightMaxTimes * fieldOffect + rightTextWidth
+            }
+        }
         // 事件监听
         // 监听鼠标右键点击：显示右键菜单
+        //AAA
         graph.on('node:contextmenu', ({ e, x, y, node, view }) => {
             if (node.getData().classify == "table") {
                 if (node.parent) {
@@ -1019,12 +1001,16 @@
                     }
                 }
             }
-            if (node.getData().classify == "component") {
+            else if (node.getData().classify == "component") {
+                //AAA
                 currentNode = node;
                 document.getElementById("addBrother").style.display = "none"
                 document.getElementById("editNode").style.display = ""
                 document.getElementById("removeNode").style.display = ""
                 document.getElementById("addChild").style.display = "none"
+            }
+            else {
+                return
             }
 
             //获取contextmenu尺寸
@@ -1138,14 +1124,132 @@
         // 候选框节点拖拽到画布上事件：组件信息加入逻辑json
         graph.on('node:added', ({ node }) => {
             console.log(node)
-            JsonData.componentData.push({
-                id: node.id,
-                data: node.data
-            })
+            // AAA
+            if (node.data && node.data.classify == "component") {
+                JsonData.componentData.push({
+                    id: node.id,
+                    data: node.data
+                })
+                // 添加子节点如：CustomFunction的输入参数
+                if (node.data.componentType == "CustomFunction") {
+                    let inNode = graph.addNode({
+                        "position": {
+                            "x": node.position().x,
+                            "y": node.position().y + 20,
+                        },
+                        "size": {
+                            "width": 200,
+                            "height": 20
+                        },
+                        "attrs": {
+                            "body": {
+                                "fill": "#fff",
+                                "strokeWidth": "1",
+                                "stroke": strokeColor
+                            },
+                            "label": {
+                                "text": "in:[NUMBER,STRING,BOOLEAN] ",
+                                "fill": "#6c757d",
+                                "refX": 10,
+                                "textAnchor": "start",
+                                "fontSize": 10
+                            }
+                        },
+                        //连接桩
+                        "ports": {
+                            "groups": {
+                                "in": {
+                                    "position": 'left',
+                                    "attrs": {
+                                        "circle": {
+                                            "r": 6,
+                                            "magnet": true,
+                                            "stroke": '#31d0c6',
+                                            "strokeWidth": 2,
+                                            "fill": '#fff',
+                                        },
+                                    },
+                                },
+                            },
+                            "items": [
+                                {
+                                    "id": 'port1',
+                                    "group": "in"
+                                },
+                            ],
+                        },
+                        "visible": true,
+                        "shape": "rect",
+                        "data": {
+                            "disableMove": true,
+                        },
+                    })
+
+                    let outNode = graph.addNode({
+                        "position": {
+                            "x": node.position().x + 200,
+                            "y": node.position().y + 20,
+                        },
+                        "size": {
+                            "width": 200,
+                            "height": 20
+                        },
+                        "attrs": {
+                            "body": {
+                                "fill": "#fff",
+                                "strokeWidth": "1",
+                                "stroke": strokeColor
+                            },
+                            "label": {
+                                "text": "Result:[NUMBER,STRING,BOOLEAN] ",
+                                "fill": "#6c757d",
+                                "refX": 10,
+                                "textAnchor": "start",
+                                "fontSize": 10
+                            }
+                        },
+                        //连接桩
+                        "ports": {
+                            "groups": {
+                                "out": {
+                                    "position": 'right',
+                                    "attrs": {
+                                        "circle": {
+                                            "r": 6,
+                                            "magnet": true,
+                                            "stroke": '#31d0c6',
+                                            "strokeWidth": 2,
+                                            "fill": '#fff',
+                                        },
+                                    },
+                                },
+                            },
+                            "items": [
+                                {
+                                    "id": 'port1',
+                                    "group": "out"
+                                },
+                            ],
+                        },
+                        "visible": true,
+                        "shape": "rect",
+                        "data": {
+                            "disableMove": true,
+                        },
+                    })
+
+                    node.addChild(inNode)
+
+                    node.addChild(outNode)
+                }
+            }
+
             saveUIdata()
+
             // const { x, y } = node.position()
         })
     </script>
+
 
 </body>
 
